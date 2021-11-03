@@ -1,0 +1,39 @@
+{
+  "name": "sonoff-mqtt-manager",
+  "version": "1.0.0",
+  "description": "A simple Node.js app to manage and monitor the usage of Sonoff Wi-Fi switches.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gcostanzoweb/Sonoff-MQTT-Manager.git"
+  },
+  "keywords": [
+    "sonoff",
+    "mqtt",
+    "tasmota",
+    "node",
+    "npm"
+  ],
+  "author": "Gabriele Costanzo",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gcostanzoweb/Sonoff-MQTT-Manager/issues"
+  },
+  "homepage": "https://github.com/gcostanzoweb/Sonoff-MQTT-Manager#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "buffer-from": "^1.1.2",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "express-validator": "^6.13.0",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.0.12",
+    "mqtt": "^4.2.8"
+  }
+}

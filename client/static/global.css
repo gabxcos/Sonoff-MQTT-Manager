@@ -1,0 +1,17 @@
+html,
+body {
+  height: 100%;
+  overflow-y: hidden;
+}
+
+main {
+  width: 100%;
+  height: calc(100% - 56px);
+  text-align: center;
+  padding: 0;
+  margin: 0 auto;
+  display: -ms-flexbox;
+  display: -webkit-box;
+  display: flex;
+  background-color: #f5f5f5;
+}
