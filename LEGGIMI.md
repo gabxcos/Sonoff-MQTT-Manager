@@ -1,5 +1,5 @@
 # Sonoff MQTT Manager
-<i>( <a href="./">English</a> | Italiano )</i>
+<i>( <a href="/">English</a> | Italiano )</i>
 <br/><br/>
 
 Questo progetto è stato utilizzato come elaborato di fine corso in **Internet of Things Based Smart Systems** presso **Unict - Università degli Studi di Catania**.
