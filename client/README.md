@@ -1,159 +1,143 @@
-# sapper-template
+# Sonoff MQTT Manager
+<center><i>( English | <a href="/LEGGIMI.md">Italiano</a> )</i></center>
+<br/><br/>
 
-The default template for setting up a [Sapper](https://github.com/sveltejs/sapper) project. Can use either Rollup or webpack as bundler.
+This project is the result of a final assignment for the 2020/21 class of **Internet of Things Based Smart Systems** at **Unict - University of Catania**.
 
-## Please note
+The main objective of this assignment is that of demonstrating the student's comprehension of a specific course topic, namely the MQTT protocol.
 
-Sapper is no longer being actively developed. You may be interested in using Sapper's succesor, [SvelteKit](https://kit.svelte.dev/) for new projects.
+---
 
-## Getting started
+## Summary
 
-### Using `degit`
+This app provides a full-stack environment for the management of **Sonoff Wi-Fi Switches**, assuming they've already been configured using the **Tasmota** firmware and setup to connect with the MQTT broker on the local network.
 
-To create a new Sapper project based on Rollup locally, run
+The **backend** provides an authentication JWT-based system for users, which can add or remove a Sonoff to their collection simply knowing their respective Tasmota IDs.
 
-```bash
-npx degit "sveltejs/sapper-template#rollup" my-app
-```
+There are API routes for toggling on & off a Sonoff, adding or deleting them from a user's list, and getting the whole list of owned Sonoffs.
 
-For a webpack-based project, instead run
+Each time a Sonoff is toggled, the backend listens to its MQTT topic and creates a new Observation in the database, in order to properly update the state of the frontend view.
 
-```bash
-npx degit "sveltejs/sapper-template#webpack" my-app
-```
+The **frontend** has forms for registering a new user and signing in at first launch, with sessions during (by default) maximum 1 hour and then asking again for a sign-in.
 
-[`degit`](https://github.com/Rich-Harris/degit) is a scaffolding tool that lets you create a directory from a branch in a repository.
+Once a user is logged in, they can navigate through tabs of their owned Sonoffs, or add a new one.
 
-Replace `my-app` with the path where you wish to create the project.
+For each selected Sonoff, the user can toggle it via a ON/OFF button, delete it from their collection, and choose a timespan of observations to consider (last 1 hour, last 24 hour, last 7 days).
 
+For a given timespan, a **Chart.js** graph is rendered of each ON/OFF event, and the whole period of "ON state" is computed, allowing the user to compute the esteemed energy consumption once an average power consumption is provided.
 
-### Using GitHub templates
+---
 
-Alternatively, you can create the new project as a GitHub repository using GitHub's template feature.
+## Reproducing my environment and starting the project
 
-Go to either [sapper-template-rollup](https://github.com/sveltejs/sapper-template-rollup) or [sapper-template-webpack](https://github.com/sveltejs/sapper-template-webpack) and click on "Use this template" to create a new project repository initialized by the template.
+This repo has been tested with a local installation of the **Eclipse Mosquitto** MQTT broker, and a local installation of **MongoDB**, both on the same machine that has the two Node.js apps running.
 
+Once both apps have been installed, the following steps were also taken in order to get everything in working order.
 
-### Running the project
+1. ### Configuring a **password list**, an **access list**, and other parameters for Mosquitto.
 
-Once you have created the project, install dependencies and run the project in development mode:
+    Namely, a `node_server` user with `password` as its password, for authenticating the backend app, and a `tasmota` user for authenticating the Sonoffs.
 
-```bash
-cd my-app
-npm install # or yarn
-npm run dev
-```
+    The default `mosquitto_passwd` was used to generate the password list file.
+    ```
+    # To create the file
+    mosquitto_passwd -c <password file> <username>
 
-This will start the development server on [localhost:3000](http://localhost:3000). Open it and click around.
+    # To add users to the file
+    mosquitto_passwd <password file> <username>
 
-You now have a fully functional Sapper project! To get started developing, consult [sapper.svelte.dev](https://sapper.svelte.dev).
+    # Both instructions ask via prompt for the password to be associated with <username>
+    ```
 
-### Using TypeScript
+    The access list may be needed in order to ensure that the `node_server` is correctly subscribed to topics and correctly publishing to others.
 
-By default, the template uses plain JavaScript. If you wish to use TypeScript instead, you need some changes to the project:
+    A simple configuration to let everyone access any topic in read & write (unsafe!) would be:
+    ```
+    topic readwrite $SYS/#
 
- * Add `typescript` as well as typings as dependences in `package.json`
- * Configure the bundler to use [`svelte-preprocess`](https://github.com/sveltejs/svelte-preprocess) and transpile the TypeScript code.
- * Add a `tsconfig.json` file
- * Update the project code to TypeScript
+    pattern readwrite $SYS/#
+    ```
 
-The template comes with a script that will perform these changes for you by running
+    Finally, a `.conf` file is needed to communicate this changes to Mosquitto, either by modifying its default config file or by specifying a new file when executing it:
+    ```
+    mosquitto -c ./mosquitto.conf
+    ```
 
-```bash
-node scripts/setupTypeScript.js
-```
+    The parameters changed in my environment include:
 
-`@sapper` dependencies are resolved through `src/node_modules/@sapper`, which is created during the build. You therefore need to run or build the project once to avoid warnings about missing dependencies.
+    ### Defining the password file
+    ```
+    password_file ./password_file
+    ```
 
-The script does not support webpack at the moment.
+    ### Allowing anonymous access (unsafe, optional)
+    ```
+    allow_anonymous true
+    ```
 
-## Directory structure
+    ### Defining the access list
+    ```
+    acl_file ./acl_file.acl
+    ```
 
-Sapper expects to find two directories in the root of your project —  `src` and `static`.
+    ### Allowing access on the local network and setting port
+    ```
+    listener 1883 0.0.0.0
+    ```
 
+2. ### Configuring Tasmota to use MQTT correctly.
 
-### src
+    Each Sonoff must be configured on the web-app panel accessible using the device's local IP, and the following must be ensured:
+    ```
+    Host: <the local IP of the computer running Mosquitto>
+    Port: 1883
+    Client: any
+    User: <a valid user in the Mosquitto password file>
+    Password: <password>
+    Topic: tasmota_%06X
+    Full Topic: %prefix%/%topic%/
+    ```
 
-The [src](src) directory contains the entry points for your app — `client.js`, `server.js` and (optionally) a `service-worker.js` — along with a `template.html` file and a `routes` directory.
-
-
-#### src/routes
-
-This is the heart of your Sapper app. There are two kinds of routes — *pages*, and *server routes*.
-
-**Pages** are Svelte components written in `.svelte` files. When a user first visits the application, they will be served a server-rendered version of the route in question, plus some JavaScript that 'hydrates' the page and initialises a client-side router. From that point forward, navigating to other pages is handled entirely on the client for a fast, app-like feel. (Sapper will preload and cache the code for these subsequent pages, so that navigation is instantaneous.)
-
-**Server routes** are modules written in `.js` files, that export functions corresponding to HTTP methods. Each function receives Express `request` and `response` objects as arguments, plus a `next` function. This is useful for creating a JSON API, for example.
-
-There are three simple rules for naming the files that define your routes:
-
-* A file called `src/routes/about.svelte` corresponds to the `/about` route. A file called `src/routes/blog/[slug].svelte` corresponds to the `/blog/:slug` route, in which case `params.slug` is available to the route
-* The file `src/routes/index.svelte` (or `src/routes/index.js`) corresponds to the root of your app. `src/routes/about/index.svelte` is treated the same as `src/routes/about.svelte`.
-* Files and directories with a leading underscore do *not* create routes. This allows you to colocate helper modules and components with the routes that depend on them — for example you could have a file called `src/routes/_helpers/datetime.js` and it would *not* create a `/_helpers/datetime` route.
-
-
-#### src/node_modules/images
-
-Images added to `src/node_modules/images` can be imported into your code using `import 'images/<filename>'`. They will be given a dynamically generated filename containing a hash, allowing for efficient caching and serving the images on a CDN.
-
-See [`index.svelte`](src/routes/index.svelte) for an example.
-
-
-#### src/node_modules/@sapper
-
-This directory is managed by Sapper and generated when building. It contains all the code you import from `@sapper` modules.
-
-
-### static
-
-The [static](static) directory contains static assets that should be served publicly. Files in this directory will be available directly under the root URL, e.g. an `image.jpg` will be available as `/image.jpg`.
-
-The default [service-worker.js](src/service-worker.js) will preload and cache these files, by retrieving a list of `files` from the generated manifest:
-
-```js
-import { files } from '@sapper/service-worker';
-```
-
-If you have static files you do not want to cache, you should exclude them from this list after importing it (and before passing it to `cache.addAll`).
-
-Static files are served using [sirv](https://github.com/lukeed/sirv).
-
-
-## Bundler configuration
-
-Sapper uses Rollup or webpack to provide code-splitting and dynamic imports, as well as compiling your Svelte components. With webpack, it also provides hot module reloading. As long as you don't do anything daft, you can edit the configuration files to add whatever plugins you'd like.
-
-
-## Production mode and deployment
-
-To start a production version of your app, run `npm run build && npm start`. This will disable live reloading, and activate the appropriate bundler plugins.
-
-You can deploy your application to any environment that supports Node 10 or above. As an example, to deploy to [Vercel Now](https://vercel.com) when using `sapper export`, run these commands:
-
-```bash
-npm install -g vercel
-vercel
-```
-
-If your app can't be exported to a static site, you can use the [vercel-sapper](https://github.com/thgh/vercel-sapper) builder. You can find instructions on how to do so in its [README](https://github.com/thgh/vercel-sapper#basic-usage).
-
-
-## Using external components
-
-When using Svelte components installed from npm, such as [@sveltejs/svelte-virtual-list](https://github.com/sveltejs/svelte-virtual-list), Svelte needs the original component source (rather than any precompiled JavaScript that ships with the component). This allows the component to be rendered server-side, and also keeps your client-side app smaller.
-
-Because of that, it's essential that the bundler doesn't treat the package as an *external dependency*. You can either modify the `external` option under `server` in [rollup.config.js](rollup.config.js) or the `externals` option in [webpack.config.js](webpack.config.js), or simply install the package to `devDependencies` rather than `dependencies`, which will cause it to get bundled (and therefore compiled) with your app:
-
-```bash
-npm install -D @sveltejs/svelte-virtual-list
-```
-
-## Troubleshooting
-
-Using Windows and WSL2? 
-
-If your project lives outside the WSL root directory, [this limitation](https://github.com/microsoft/WSL/issues/4169) is known to cause live-reloading to fail. See [this issue](https://github.com/sveltejs/sapper/issues/1150) for details.
-
-## Bugs and feedback
-
-Sapper is in early development, and may have the odd rough edge here and there. Please be vocal over on the [Sapper issue tracker](https://github.com/sveltejs/sapper/issues).
+    In particular:
+    - the `topic` and `full topic` fields must be exactly that, because the backend expects that formatting when adding new Sonoffs
+    - the IP can be the router's local IP if the 1883 port is forwarded correctly
+    ```
+    192.168.1.1:1883 <-----> 192.168.1.x:1883
+    ```
+
+3. ### Creating a MongoDB database for the backend
+
+4. ### Configuring the app's `.env`, for example:
+
+    ```
+    # MQTT
+    HOST=localhost
+    PORT=1883
+    CLIENT_ID=node_server
+    USERNAME=node_server
+    PASSWORD=password
+
+    # MONGODB
+    DB_HOST=127.0.0.1
+    DB_NAME=SonoffDB
+
+    # EXPRESS
+    SERVER_HOST=localhost
+    SERVER_PORT=3000
+    JWT_SECRET=secret
+    ```
+5. ### Starting both Mosquitto and MongoDB, and then starting the two Node.js apps:
+
+    Backend:
+
+    ```
+    cd server
+    npm run dev
+    ```
+
+    Frontend
+
+    ```
+    cd client
+    npm run dev
+    ```
