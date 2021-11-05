@@ -1,5 +1,5 @@
 # Sonoff MQTT Manager
-<center><i>( English | <a href="/LEGGIMI.md">Italiano</a> )</i></center>
+<i>( English | <a href="/LEGGIMI.md">Italiano</a> )</i>
 <br/><br/>
 
 This project is the result of a final assignment for the 2020/21 class of **Internet of Things Based Smart Systems** at **Unict - University of Catania**.
