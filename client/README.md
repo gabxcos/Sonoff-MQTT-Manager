@@ -1,143 +1,44 @@
-# Sonoff MQTT Manager
+# Sonoff MQTT Manager - The Frontend App
 <i>( English | <a href="./LEGGIMI.md">Italiano</a> )</i>
 <br/><br/>
 
-This project is the result of a final assignment for the 2020/21 class of **Internet of Things Based Smart Systems** at **Unict - University of Catania**.
+For the frontend, the Svelte framework was chosen. It's a new, lightweight alternative to classic frameworks such as React or Angular, which makes it very easy to come up with a working prototype for a full web app.
 
-The main objective of this assignment is that of demonstrating the student's comprehension of a specific course topic, namely the MQTT protocol.
-
----
-
-## Summary
-
-This app provides a full-stack environment for the management of **Sonoff Wi-Fi Switches**, assuming they've already been configured using the **Tasmota** firmware and setup to connect with the MQTT broker on the local network.
-
-The **backend** provides an authentication JWT-based system for users, which can add or remove a Sonoff to their collection simply knowing their respective Tasmota IDs.
-
-There are API routes for toggling on & off a Sonoff, adding or deleting them from a user's list, and getting the whole list of owned Sonoffs.
-
-Each time a Sonoff is toggled, the backend listens to its MQTT topic and creates a new Observation in the database, in order to properly update the state of the frontend view.
-
-The **frontend** has forms for registering a new user and signing in at first launch, with sessions during (by default) maximum 1 hour and then asking again for a sign-in.
-
-Once a user is logged in, they can navigate through tabs of their owned Sonoffs, or add a new one.
-
-For each selected Sonoff, the user can toggle it via a ON/OFF button, delete it from their collection, and choose a timespan of observations to consider (last 1 hour, last 24 hour, last 7 days).
-
-For a given timespan, a **Chart.js** graph is rendered of each ON/OFF event, and the whole period of "ON state" is computed, allowing the user to compute the esteemed energy consumption once an average power consumption is provided.
+This folder is specifically powered by Sapper, for configuration with Rollup and routing support.
 
 ---
 
-## Reproducing my environment and starting the project
+## Other packages
 
-This repo has been tested with a local installation of the **Eclipse Mosquitto** MQTT broker, and a local installation of **MongoDB**, both on the same machine that has the two Node.js apps running.
+- `svelte-chartjs`: this is an adaptation of the famous `Graph.js` library in order to use Svelte components and component logic.
+- `chartjs-adapter-moment`: this import is needed to adapt the format of Dates when rendering points to a graph.
+- `sveltestrap`: this is an adaptation of the popular CSS+JS framework Bootstrap, to use its custom HTML tags and classes as Svelte components.
 
-Once both apps have been installed, the following steps were also taken in order to get everything in working order.
+---
 
-1. ### Configuring a **password list**, an **access list**, and other parameters for Mosquitto.
+## Stores
 
-    Namely, a `node_server` user with `password` as its password, for authenticating the backend app, and a `tasmota` user for authenticating the Sonoffs.
+The `auth.js` file implements two Svelte global stores, `isAuth` and `user`.
 
-    The default `mosquitto_passwd` was used to generate the password list file.
-    ```
-    # To create the file
-    mosquitto_passwd -c <password file> <username>
+- `isAuth` ensures globally that the user is authenticated, and helps with redirects to Login/Register/Dashboard pages and hiding unauthorized components. The store retrieves a current user's data from the Local Storage and verifies that the token isn't expired. The logout function also erases the Local Storage, ensuring `isAuth` to be set to false and force a new login.
 
-    # To add users to the file
-    mosquitto_passwd <password file> <username>
+- `user` contains useful data on the user, to populate the dashboard on startup, such as their `nickname` and the list of owned `topics`.
 
-    # Both instructions ask via prompt for the password to be associated with <username>
-    ```
+---
 
-    The access list may be needed in order to ensure that the `node_server` is correctly subscribed to topics and correctly publishing to others.
+## Routes and page structure
 
-    A simple configuration to let everyone access any topic in read & write (unsafe!) would be:
-    ```
-    topic readwrite $SYS/#
+The `_layout.svelte` file defines the Layout for any other page, where inside the `<body>` tag a `<Nav>` component is always present, followed by a custom `<slot>`.
 
-    pattern readwrite $SYS/#
-    ```
+- In `login.svelte` and `register.svelte`, equal to the `/login` and `/register` routes, the `<FormMain>` is the `<main>` container, and inside either a `<Login>` or `<Register>` Bootstrap Form component.
 
-    Finally, a `.conf` file is needed to communicate this changes to Mosquitto, either by modifying its default config file or by specifying a new file when executing it:
-    ```
-    mosquitto -c ./mosquitto.conf
-    ```
+- In `index.svelte`, equal to the `root, /` route, the content is rendered inside a `<DashboardMain>` component to be a tab Bootstrap Nav and a container for the Graph if the user is authenticated, and otherwise a placeholder message while waiting for the guest user to be redirected.
 
-    The parameters changed in my environment include:
+---
 
-    ### Defining the password file
-    ```
-    password_file ./password_file
-    ```
+### Components
 
-    ### Allowing anonymous access (unsafe, optional)
-    ```
-    allow_anonymous true
-    ```
-
-    ### Defining the access list
-    ```
-    acl_file ./acl_file.acl
-    ```
-
-    ### Allowing access on the local network and setting port
-    ```
-    listener 1883 0.0.0.0
-    ```
-
-2. ### Configuring Tasmota to use MQTT correctly.
-
-    Each Sonoff must be configured on the web-app panel accessible using the device's local IP, and the following must be ensured:
-    ```
-    Host: <the local IP of the computer running Mosquitto>
-    Port: 1883
-    Client: any
-    User: <a valid user in the Mosquitto password file>
-    Password: <password>
-    Topic: tasmota_%06X
-    Full Topic: %prefix%/%topic%/
-    ```
-
-    In particular:
-    - the `topic` and `full topic` fields must be exactly that, because the backend expects that formatting when adding new Sonoffs
-    - the IP can be the router's local IP if the 1883 port is forwarded correctly
-    ```
-    192.168.1.1:1883 <-----> 192.168.1.x:1883
-    ```
-
-3. ### Creating a MongoDB database for the backend
-
-4. ### Configuring the app's `.env`, for example:
-
-    ```
-    # MQTT
-    HOST=localhost
-    PORT=1883
-    CLIENT_ID=node_server
-    USERNAME=node_server
-    PASSWORD=password
-
-    # MONGODB
-    DB_HOST=127.0.0.1
-    DB_NAME=SonoffDB
-
-    # EXPRESS
-    SERVER_HOST=localhost
-    SERVER_PORT=3000
-    JWT_SECRET=secret
-    ```
-5. ### Starting both Mosquitto and MongoDB, and then starting the two Node.js apps:
-
-    Backend:
-
-    ```
-    cd server
-    npm run dev
-    ```
-
-    Frontend
-
-    ```
-    cd client
-    npm run dev
-    ```
+- `containers` folder: it contains two components, `DashboardMain` and `FormMain`, used to stylize a `<main>` HTML element differently dipending on the type of page content.
+- `forms` folder: it contains two components, `Login` and `Register`, used to render a corresponding Bootstrap Form and execute a POST request on submit.
+- `Nav`: a component representing the page's top nav, customized based on whether a user is authenticated or not
+- `Graph`: the most complex component, it contains the logic to compute the points of the graph based on Observations in the database, convert Dates to data points' x's, and render everything inside a `<Graph>` component, to be updated at every response the Dashboard receives from the backend.

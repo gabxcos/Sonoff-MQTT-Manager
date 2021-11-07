@@ -98,6 +98,8 @@ Una volta installati entrambi gli eseguibili, sono stati effettuati i seguenti s
     Full Topic: %prefix%/%topic%/
     ```
 
+    ![Tasmota MQTT config](./documentation/tasmotaMQTT.png "Tasmota MQTT config")
+
     In particolare:
     - il `topic` ed il `full topic` devono essere esattamente tali, poiché il backend si aspetta tale formattazione per i topic
     - l'IP può essere l'IP locale del router se la porta 1883 è stata configurata correttamente per il forwarding

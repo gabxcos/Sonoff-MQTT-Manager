@@ -1,143 +1,103 @@
-# Sonoff MQTT Manager
+# Sonoff MQTT Manager - L'App Backend
 <i>( <a href="./">English</a> | Italiano )</i>
 <br/><br/>
 
-Questo progetto è stato utilizzato come elaborato di fine corso in **Internet of Things Based Smart Systems** presso **Unict - Università degli Studi di Catania**.
-
-L'obiettivo principale di questo elaborato consiste nel dimostrare la comprensione da parte dello studente di uno specifico argomento del corso, in questo caso il protocollo MQTT.
+Il lato backend del progetto è costituito da un API server basato su `Express.js`, connesso a `MongoDB` tramite il package Mongoose per salvare dati, e all'`MQTT broker` Mosquitto tramite il package MQTT.js.
 
 ---
 
-## In breve
+## Struttura del progetto
 
-Quest'app fornisce un ambiente full-stack per la gestione dei **Sonoff Wi-Fi Switches**, presupponendo che siano già stati flashati con il **Tasmota** firmware e configurati per connettersi al broker MQTT su rete locale.
+Il progetto è avviato tramite il file principale, `app.js`, che apre il server Express.js coi suoi plugin in ascolto sulla porta 3000 e avvia gli altri servizi.
 
-Il **backend** fornisce un sistema di autenticazione JWT-based per gli utenti, che permette loro di aggiungere o rimuovere Sonoff alla loro collezione usando gli ID autogenerati da Tasmota.
+Tali servizi sono presenti nella cartella di root del server come singoli file JavaScript:
+- `logger.js`: espone una singola funzione di logging/debugging, che prende come parametri un **service** ed un **message** per effettuare logout sulla console di Node nel formato:
+    ```
+    [MQTT] Connesso al Broker.
+    ```
 
-Sono presenti route API per accendere e spegnere i Sonoff, aggiungerli o eliminarli dalla lista di un utente, o ottenere l'intera collezione.
+- `broker.js`: importa il package **MQTT.js** ed espone una pseudoclasse `Broker`, con funzionalità di base per subscribe, publish, e verifica della connessione.
 
-Ogni volta che un Sonoff cambia di stato, il backend ascolta il suo topic MQTT e crea una nuova Observation nel database, in modo tale da aggiornare di conseguenza ed in tempo reale lo stato sul frontend.
+    Una volta importato, questo file tenta anche di: connettersi al Broker; trovare tutti i Sonoff registrati; effettuare subscribe ai topic corrispondenti.
 
-Il **frontend** presenta form per la registrazione ed il login dell'utente al primo avvio, con sessioni di durata massima di 1 ora (valore di default) a seguito della quale si richiede all'utente di effettuare il login.
+    Questo broker suppone un settaggio fisso di `QoS=2` e un'autenticazione username+password.
 
-Una volta loggato, l'utente può navigare fra diverse tab con i Sonoff che possiede, o aggiungerne di nuovi.
+- `db.js`: un semplice servizio per connettersi a MongoDB, verificare la connessione, e ritornare un oggetto `db` su cui effettuare le queries.
 
-Per ogni Sonoff che si seleziona, l'utente può cambiarne lo stato usando un bottone GUI di ON/OFF, eliminarlo dalla sua collezione, e scegliere un intervallo di tempo da considerare (ultima 1 ora, ultime 24 ore, ultimi 7 giorni).
+- `config.js`: un semplice servizio che fornisce un environment globale usando `dotenv` per recuperare ogni field di un file `.env`.
 
-Per un dato intervallo, in **Chart.js** sono graficati a schermo gli eventi di ON e OFF, e viene calcolato il periodo in cui il Sonoff è rimasto acceso, permettendo all'utente di calcolare il consumo energetico atteso inserendo la potenza del dispositivo.
+Le altre cartelle forniscono **Routes** e **Middlewares** nel senso di Express, **Models** nel senso di Mongoose, e **Controllers** per collegare il tutto assieme.
 
 ---
 
-## Come riprodurre il mio ambiente locale ed avviare il progetto
+## Models
 
-Questa repo è stata testata con un'installazione locale del broker MQTT **Eclipse Mosquitto**, ed un'installazione locale di **MongoDB**, entrambi in run sulla stessa macchina che esegue le due app Node.js.
+Sono stati creati tre modelli di Mongoose, ciascuno con - in aggiunta ai propri field personali - campi created e updated di timestamp.
 
-Una volta installati entrambi gli eseguibili, sono stati effettuati i seguenti step per permettere il corretto funzionamento del progetto.
-
-1. ### Configurare una **password list**, una **access list**, e altri parametri per Mosquitto.
-
-    Ad esempio, un utente `node_server` con `password` come sua password, per autenticare l'app di backend, e un utente `tasmota` per autenticare i Sonoff.
-
-    L'eseguibile di default `mosquitto_passwd` è stato utilizzato per creare il file con la password list.
+- ### User
     ```
-    # Per creare il file
-    mosquitto_passwd -c <password file> <username>
-
-    # Per aggiungere utenti al file
-    mosquitto_passwd <password file> <username>
-
-    # Entrambe le istruzioni richiedono poi la password da associare all'utente <username>
+    nickname: String,
+    username: String, index,
+    password: String,
+    sonoffs: [{
+        _id: ObjectId, ref: 'Sonoff',
+        topic: String,
+        name: String
+    }]
     ```
 
-    La access list potrebbe essere necessaria per far sì che il `node_server` sia correttamente "subscribed" ai topic e effettui correttamente "publish".
-
-    Una semplice configurazione per permettere a qualunque utente di accedere tutti i topic in read e write (non è sicuro!) sarebbe:
+- ### Sonoff
     ```
-    topic readwrite $SYS/#
-
-    pattern readwrite $SYS/#
-    ```
-
-    Infine, è richiesto un file `.conf` per comunicare le nuove impostazioni a Mosquitto, modificando il suo config file di default o specificando un nuovo file in fase di esecuzione:
-    ```
-    mosquitto -c ./mosquitto.conf
-    ```
-
-    I parametri da me modificati in configurazione includono:
-
-    ### Definire il password file
-    ```
-    password_file ./password_file
+    owners: [{ 
+        _id: ObjectId, ref: 'User',
+        deviceName: String
+    }],
+    topic: String, index,
+    history: [{
+        _id: ObjectId, ref: 'Observation',
+        value: Boolean,
+        timestamp: Date, default: Date.now
+    }]
     ```
 
-    ### Permettere accessi anonimi (non sicuro, opzionale)
+- ### Observation
     ```
-    allow_anonymous true
-    ```
-
-    ### Definire la access list
-    ```
-    acl_file ./acl_file.acl
+    sonoff: String,
+    value: Boolean
     ```
 
-    ### Permettere l'accesso sulla rete locale e settare la porta
-    ```
-    listener 1883 0.0.0.0
-    ```
+---
 
-2. ### Configurare Tasmota per usare MQTT correttamente.
+## Routes
 
-    Ogni Sonoff dev'essere configurato sul pannello della web-app accessibile usando l'IP locale del dispositivo, e bisogna assicurare questi settaggi:
-    ```
-    Host: <l'IP locale del computer che usa Mosquitto>
-    Port: 1883
-    Client: qualunque
-    User: <un username valido nel password file di Mosquitto>
-    Password: <password>
-    Topic: tasmota_%06X
-    Full Topic: %prefix%/%topic%/
-    ```
+Ciascuna di queste route possiede il metodo di un Controller come callback, per utilizzare gli schemas di Mongoose correttamente ed effettuare operazioni sul Broker MQTT.
 
-    In particolare:
-    - il `topic` ed il `full topic` devono essere esattamente tali, poiché il backend si aspetta tale formattazione per i topic
-    - l'IP può essere l'IP locale del router se la porta 1883 è stata configurata correttamente per il forwarding
-    ```
-    192.168.1.1:1883 <-----> 192.168.1.x:1883
-    ```
+- ### Health check
 
-3. ### Creare un database MongoDB per il backend
+`GET: /` --> ottiene un semplice messaggio di Health check
 
-4. ### Configurare il file `.env`, ad esempio:
+- ### Sonoffs management
 
-    ```
-    # MQTT
-    HOST=localhost
-    PORT=1883
-    CLIENT_ID=node_server
-    USERNAME=node_server
-    PASSWORD=password
+`POST: /sonoff/create` --> crea un nuovo Sonoff o aggiunge l'utente ad uno esistente, dati un `topic` ed un custom `name`
 
-    # MONGODB
-    DB_HOST=127.0.0.1
-    DB_NAME=SonoffDB
+`POST: /sonoff/delete` --> rimuove un utente da o cancella un Sonoff, dato il suo `topic`
 
-    # EXPRESS
-    SERVER_HOST=localhost
-    SERVER_PORT=3000
-    JWT_SECRET=secret
-    ```
-5. ### Avviare sia Mosquitto che MongoDB, e poi avviare le due app Node.js:
+`GET: /sonoff/collection` --> ritorna una collezione di Sonoff posseduti dall'utente
 
-    Backend:
+`GET: /sonoff/:id/observations` --> ritorna tutte le Observations per il Sonoff con `topic = id`
 
-    ```
-    cd server
-    npm run dev
-    ```
+`POST: /sonoff/:id/toggle, /sonoff/:id/on, /sonoff/:id/off` --> modifica lo stato ON/OFF del Sonoff con `topic = id`
 
-    Frontend
+- ### User authentication
 
-    ```
-    cd client
-    npm run dev
-    ```
+`POST: /user/register` --> crea un nuovo utente, dato un `nickname` pubblico e una coppia di `username` e `password`
+
+`POST: /user/login` --> logga l'utente con dati `username` e `password`, e ritorna una JWT generato dal server
+
+---
+
+## Middleware
+
+È presente un solo middleware, `auth.js`, che ha la funzione di verificare il token JWT presente nell'intestazione delle richieste HTTP, scoprire se è scaduto, e trovare un utente valido ad esso collegato.
+
+Blocca le callback legate alla route, terminandole prematuramente con una risposta `401: Unauthorized`.

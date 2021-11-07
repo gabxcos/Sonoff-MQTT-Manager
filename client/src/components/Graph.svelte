@@ -65,7 +65,7 @@
         if(hours>0 || hasGreaterSetted){ time += hours+"h "; hasGreaterSetted = true; }
         if(minutes>0 || hasGreaterSetted){ time += minutes+"m "; hasGreaterSetted = true; }
         if(seconds>0 || hasGreaterSetted){ time += seconds+"s "; hasGreaterSetted = true; }
-        if(ms>0 || hasGreaterSetted) time += ms+"ms ";
+        time += ms+"ms ";
         
         return time;
     }

@@ -189,27 +189,6 @@ const SonoffController = {
                 }
             }
         );
-
-        /*const deleteSonoff = Sonoff.deleteOne(filter, (err, result) => {
-            if(err){
-                return res.status(500).json({
-                    success: false,
-                    message: "There has been an error with the deletion.",
-                    error: err
-                });
-            }
-            if(result.deletedCount < 1){
-                return res.status(500).json({
-                    success: false,
-                    message: "There is no Sonoff with this topic, or you don't own it."
-                });
-            }
-
-            return res.status(200).json({
-                success: true,
-                message: `The Sonoff with the topic [${req.body.topic}] was deleted successfully!`
-            });
-        });*/
     },
 
     getCollection: (req, res) => {
