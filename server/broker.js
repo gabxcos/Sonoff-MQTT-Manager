@@ -1,3 +1,5 @@
+// Service for the MQTT broker
+
 const logger = require('./logger');
 
 var mqtt = require('mqtt');

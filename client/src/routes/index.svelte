@@ -36,6 +36,7 @@
 
 	let host = SERVER_HOST, port = SERVER_PORT;
 
+	// Request all Observations to update the graph's points
 	let updatePoints = () => {
 		if(currTopic==null){
 			pointData = [];
@@ -73,6 +74,7 @@
 		});
 	}
 
+	// Request all topics to observe any changes in the user's collection
 	let updateTopics = () => {
 		fetch(`http://${host}:${port}/sonoff/collection`, {
 			method: 'GET',
@@ -111,6 +113,7 @@
 		});
 	}
 
+	// Toggle Sonoff's state ON or OFF
 	let toggleSonoff = () => {
 		fetch(`http://${host}:${port}/sonoff/${currTopic}/toggle`, {
 			method: 'POST',
@@ -132,6 +135,7 @@
 		});
 	}
 
+	// Create a new Sonoff
 	let createSonoff = () => {
 		fetch(`http://${host}:${port}/sonoff/create`, {
 			method: 'POST',
@@ -160,6 +164,7 @@
 		});
 	}
 
+	// Delete an existing Sonoff
 	let deleteSonoff = (t) => {
 		fetch(`http://${host}:${port}/sonoff/delete`, {
 			method: 'POST',
@@ -187,6 +192,7 @@
 		});
 	}
 
+	// Calculate from the points how much time the Sonoff has been ON
 	let calculateElapsedOnTime = () => {
 		if(pointData.length<1) return 0;
 		let tmpTime = 0;

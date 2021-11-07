@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 
+// Authentication global store
 function isAuthenticated(){
     const { subscribe, set } = writable(false);
 
@@ -27,6 +28,7 @@ function isAuthenticated(){
     }
 }
 
+// User state global store
 function userState(){
     const { subscribe, set, update } = writable(null);
 

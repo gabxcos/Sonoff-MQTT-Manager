@@ -1,5 +1,5 @@
 {
-  "name": "sonoff-mqtt-manager",
+  "name": "Sonoff MQTT Manager - Server",
   "version": "1.0.0",
   "description": "A simple Node.js app to manage and monitor the usage of Sonoff Wi-Fi switches.",
   "main": "app.js",

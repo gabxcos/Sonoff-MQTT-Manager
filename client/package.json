@@ -1,6 +1,6 @@
 {
-  "name": "TODO",
-  "description": "TODO",
+  "name": "Sonoff MQTT Manager - Client",
+  "description": "A simple Node.js app to manage and monitor the usage of Sonoff Wi-Fi switches.",
   "version": "0.0.1",
   "scripts": {
     "dev": "sapper dev",

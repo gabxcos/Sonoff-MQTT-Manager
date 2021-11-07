@@ -148,9 +148,9 @@ Una volta installati entrambi gli eseguibili, sono stati effettuati i seguenti s
 
 ## Come si usa?
 
-Il backend è un'app Express.js attesa in apertura su `localhost:3000` di default, mentre il frontend è un'app Svelte in apertura su `localhost:5000` di default.
+Il backend è un'app Express.js attesa in apertura su `localhost:3000` di default, mentre il frontend è un'app Svelte in apertura su `localhost:3001` di default.
 
-Connettendosi su `localhost:5000` per la prima volta dovrebbe causare un redirect alla pagina di **Login**, dalla quale è anche possibile raggiungere la pagina di **Register**.
+Connettendosi su `localhost:3001` per la prima volta dovrebbe causare un redirect alla pagina di **Login**, dalla quale è anche possibile raggiungere la pagina di **Register**.
 
 ### Login
 ![Pagina Login](./documentation/login.png "Pagina Login")

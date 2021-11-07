@@ -150,9 +150,9 @@ Once both apps have been installed, the following steps were also taken in order
 
 ## How to use
 
-The backend is an Express.js app supposed to open on `localhost:3000` by default, and the frontend a Svelte app supposed to open on `localhost:5000` by default.
+The backend is an Express.js app supposed to open on `localhost:3000` by default, and the frontend a Svelte app supposed to open on `localhost:3001` by default.
 
-Connecting to `localhost:5000` for the first time should prompt a redirect to the **Login** page, from where the **Register** page is also reachable.
+Connecting to `localhost:3001` for the first time should prompt a redirect to the **Login** page, from where the **Register** page is also reachable.
 
 ### Login
 ![Login page](./documentation/login.png "Login page")

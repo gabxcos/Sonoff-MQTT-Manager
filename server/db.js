@@ -1,10 +1,10 @@
+// Service for the MongoDB database
+
 const logger = require('./logger');
 
 const mongoose = require('mongoose');
 const { DB_HOST, DB_NAME } = require('./config');
 
-
-//mongoose.set('useCreateIndex', true);
 mongoose.connect(`mongodb://${DB_HOST}/${DB_NAME}`, 
     { 
         useNewUrlParser: true,

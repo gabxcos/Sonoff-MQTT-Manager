@@ -1,25 +1,13 @@
 <script>
 	import {
-	  //Collapse,
 	  Navbar,
-	  NavbarToggler,
 	  NavbarBrand,
 	  Nav,
 	  NavItem,
-	  NavLink,
-	  /*Dropdown,
-	  DropdownToggle,
-	  DropdownMenu,
-	  DropdownItem*/
+	  NavLink
 	} from 'sveltestrap/src';
   
 	import { isAuth, user } from '../auth';
-
-	let isOpen = false;
-
-	function handleUpdate(event) {
-		isOpen = event.detail.isOpen;
-	}
 
 	function logout(){
 		isAuth.logout();

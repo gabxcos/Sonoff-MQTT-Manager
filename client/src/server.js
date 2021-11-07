@@ -3,7 +3,7 @@ import polka from 'polka';
 import compression from 'compression';
 import * as sapper from '@sapper/server';
 
-process.env.PORT = 3001;
+process.env.PORT = 3001;	// Manually set port 3001
 const { PORT, NODE_ENV } = process.env;
 const dev = NODE_ENV === 'development';
 
