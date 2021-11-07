@@ -3,7 +3,7 @@
   "description": "TODO",
   "version": "0.0.1",
   "scripts": {
-    "dev": "PORT=5000 sapper dev",
+    "dev": "sapper dev",
     "build": "sapper build --legacy",
     "export": "sapper export --legacy",
     "start": "node __sapper__/build"

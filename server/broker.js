@@ -9,15 +9,20 @@ const Observation = require("./models/observation");
 
 options = {
     clientId: CLIENT_ID || 'mqttjs_' + Math.random().toString(16).substr(2, 8),
-    username: USERNAME,
-    password: PASSWORD,
     protocolId: 'MQIsdp',
     protocolVersion: 3,
     connectTimeout:1000,
     debug: true
 }
 
+if(USERNAME && PASSWORD){
+    options.username = USERNAME;
+    options.password = PASSWORD;
+    logger('MQTT', 'Using credentials for '+ USERNAME +'.');
+}
+
 var client = mqtt.connect(`mqtt://${HOST}:${PORT}/`, options);
+var topics = [];
 
 client.on("connect", () => {
     if(!client.connected){
@@ -27,15 +32,8 @@ client.on("connect", () => {
     else logger('MQTT', 'Connected to the broker.');
 });
 
-db.on("connected", () => {
-
-    Sonoff.find({}, (err, sonoffs) => {
-        var topics = sonoffs.map(s => s.topic);
-
-        var topicsPresent = topics!==null && topics.length>0;
-
-        logger('MQTT', `Found ${topicsPresent ? topics.length : 'no'} topics${topicsPresent ? ': '+topics.toString() : ''}`);
-
+startup = () => {
+    if(client.connected){
         topics.forEach(t => 
             client.subscribe(`stat/tasmota_${t}/POWER`, { qos: 2 }, (err, granted) => {
                 if (err) {
@@ -46,6 +44,23 @@ db.on("connected", () => {
                 };
             })
         );
+    }else{
+        logger('MQTT', 'Not connected to Broker, retrying subscribe in 5 seconds...');
+        setTimeout(startup, 5000);
+    }
+}
+ 
+db.on("connected", () => {
+
+    Sonoff.find({}, (err, sonoffs) => {
+        topics = sonoffs.map(s => s.topic);
+
+        var topicsPresent = topics!==null && topics.length>0;
+
+        logger('MQTT', `Found ${topicsPresent ? topics.length : 'no'} topics${topicsPresent ? ': '+topics.toString() : ''}`);
+
+        setTimeout(startup, 5000);
+        
     });
 });
 
