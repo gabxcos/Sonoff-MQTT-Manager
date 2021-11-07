@@ -98,6 +98,8 @@ Once both apps have been installed, the following steps were also taken in order
     Full Topic: %prefix%/%topic%/
     ```
 
+    ![Tasmota MQTT config](./documentation/tasmotaMQTT.png "Tasmota MQTT config")
+
     In particular:
     - the `topic` and `full topic` fields must be exactly that, because the backend expects that formatting when adding new Sonoffs
     - the IP can be the router's local IP if the 1883 port is forwarded correctly
@@ -132,6 +134,7 @@ Once both apps have been installed, the following steps were also taken in order
 
     ```
     cd server
+    npm install
     npm run dev
     ```
 
@@ -139,5 +142,96 @@ Once both apps have been installed, the following steps were also taken in order
 
     ```
     cd client
+    npm install
     npm run dev
     ```
+
+---
+
+## How to use
+
+The backend is an Express.js app supposed to open on `localhost:3000` by default, and the frontend a Svelte app supposed to open on `localhost:5000` by default.
+
+Connecting to `localhost:5000` for the first time should prompt a redirect to the **Login** page, from where the **Register** page is also reachable.
+
+### Login
+![Login page](./documentation/login.png "Login page")
+
+### Register
+![Register page](./documentation/register.png "Register page")
+
+Once a new user is created and a sign in is performed, the `Local Storage` will be filled with `JWT`, its expire date, and other parameters, in order to mantain a state of the user session client-side, and the user will be redirected to the **Dashboard** page.
+
+### Dashboard
+![Dashboard page](./documentation/dashboard.png "Dashboard page")
+
+Here are the actions the user can perform from this page:
+
+1. ### Choose a tab for an existing Sonoff in the collection
+
+    These tabs represent the Sonoffs owned by the user.
+    
+    Each tab's name is comprised of the name the user associated to the device, and the device's own Tasmota ID (the `%06X` placeholder in the `tasmota_%06X` topic configured via the Tasmota web app).
+
+    ![Tasmota MQTT topic](./documentation/tasmotaTopic.png "Tasmota MQTT topic")
+
+    In this example, a working `Topic` in the sense of this web app (HTTP + MongoDB) would be the final part, `2C3C74`. It will be the backend's duty to include this app-side topic to the corresponding MQTT-side actual topics.
+
+    Namely, `stat/tasmota_2C3C74/POWER` is the topic to subscribe to to be notified of each ON/OFF event published by Tasmota, while `cmnd/tasmota_2C3C74/Power` is the topic to publish to in order to trigger the hardware toggle on the Sonoff.
+
+    Given a clicked and active tab, the other GUI elements will be mapped and synced accordingly to that Sonoff's Observations registered in the database, for example the energy consumption and elapsed time, the ON/OFF state and the graph.
+
+2. ### Add a new Sonoff to the user's collection
+
+    Clicking on this tab instead shows a form where a new Sonoff can be added, given its Tasmota topic and a user-given name.
+
+    ![Add new Sonoff](./documentation/addSonoff.png "Add new Sonoff")
+
+    If no Sonoff is registered with that topic, the database creates a new one; otherwise, the authenticated user is added to the list of owners of that Sonoff, with the assigned name.
+
+    The Sonoff is added as a new tab. No check on the actual existence of the device is implemented: this is in order to mantain the app's operability even when actual Sonoffs are turned off, or connect to MQTT in a later moment, while the project is already running.
+
+3. ### Choose a timespan
+
+    Three timespans have been implemented: last hour, last 24 hours, and last 7 days.
+    Choosing a different timespan updates points 4, 5, and 6 accordingly.
+
+4. ### The graph of events
+
+    `Chart.js` is used in order to render a graph of each ON and OFF event registered for the active Sonoff.
+
+    The logic in the backend is that of registering as a new Observation any published MQTT message that changes the last registered state, and deleting Observations older than 7 days.
+
+    This approach improves on naive ones, such as registering the state on a timed basis every X seconds, in that it doesn't saturate the database with useless data that would later be removed in order to compute the graph's points to plot.
+
+    Hovering the mouse over the graph exposes the single points, where a popup with the details about the ON/OFF state and the exact date and time is shown.
+
+5. ### The elapsed ON time
+
+    The label of the graph is used to show the amount of time elapsed in the ON state, during the chosen timespan.
+
+6. ### Power consumption calculator
+
+    This simple calculator expects the user to input the device's power on the left, in `kW`, and multiplies the value for the `elapsed ON time` to give in output the device's energy consumption in `kWh` on the right.
+    
+    A simple update could implement the device's power as a field in the database, still it's better to leave the option of choosing a custom value on the fly to the user, as different devices support different operational modes, which in turn correspond to different power amounts.
+
+7. ### The ON/OFF Power button
+
+    This button indicates the device's current state with a slight blue tint around it, in case the device is ON, and no tint around the grey button, if the device is OFF.
+
+    Clicking on this button sends a TOGGLE command to the backend API, which in turn publishes a TOGGLE command via MQTT.
+
+    The state of this button is synced thanks to a subscribe mechanism at each MQTT new message on the topic, and as such it automatically updates when the device is toggled via other means (physical button, manual publish on the topic, click on the Tasmota web app, ...).
+
+8. ### Delete the Sonoff
+
+    This button deletes the Sonoff from the user's collection. It will be actually deleted from the database if no other owner is associated to it anymore, and otherwise only the current user will be removed from its owners' list.
+
+    The Observations are never removed (except the ones older than 7 days), so in case of an accidental deletion the state of previous observations is preserved once the Sonoff is added again to the database.
+
+9. ### Current user and Logout
+
+    Where previously the `Login` and `Register` links were found, now the current user's nickname is listed, together with a link to `Logout`. Login and Register pages are not available unless the user logs out, and in that case the Local Storage is emptied.
+
+    An automatic logout is performed once the JWT expires (default: in 1 hour).

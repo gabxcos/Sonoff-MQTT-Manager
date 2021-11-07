@@ -48,14 +48,14 @@
 </script>
 
 <form class="form-signin" on:submit|preventDefault={submit}>
-    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+    <h1 class="h3 mb-3 font-weight-normal">Register</h1>
     <label for="inputNickname" class="sr-only">Display name</label>
     <input type="text" id="inputNickname" class="form-control" bind:value={nickname} placeholder="Nickname" required="true">
     <label for="inputUsername" class="sr-only">Username</label>
     <input type="text" id="inputUsername" class="form-control" bind:value={username} placeholder="Username" required="true">
     <label for="inputPassword" class="sr-only">Password</label>
     <input type="password" id="inputPassword" class="form-control" bind:value={password} placeholder="Password" required="true">
-    <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+    <button class="btn btn-lg btn-primary btn-block" type="submit">Register</button>
 </form>
 
 {#if success}

@@ -141,3 +141,93 @@ Una volta installati entrambi gli eseguibili, sono stati effettuati i seguenti s
     cd client
     npm run dev
     ```
+
+---
+
+## Come si usa?
+
+Il backend è un'app Express.js attesa in apertura su `localhost:3000` di default, mentre il frontend è un'app Svelte in apertura su `localhost:5000` di default.
+
+Connettendosi su `localhost:5000` per la prima volta dovrebbe causare un redirect alla pagina di **Login**, dalla quale è anche possibile raggiungere la pagina di **Register**.
+
+### Login
+![Pagina Login](./documentation/login.png "Pagina Login")
+
+### Register
+![Pagina Register](./documentation/register.png "Pagina Register")
+
+Una volta registrato e loggato un nuovo utente, il `Local Storage` conterrà il `JWT` generato, la sua data di scadenza, e altri parametri, in modo tale da mantenere uno stato client-side dell'app, e l'utente verrà reindirizzato alla **Dashboard**.
+
+### Dashboard
+![Pagina Dashboard](./documentation/dashboard.png "Pagina Dashboard")
+
+Da qui, l'utente può svolgere una serie di azioni:
+
+1. ### Scegliere una tab per un Sonoff presente in collezione
+
+    Queste tab rappresentano i Sonoff correntemente posseduti dall'utente.
+    
+    Il nome di ogni tab è costituito dal nome assegnato dall'utente al device, e dal Tasmota ID proprio del device (il placeholder `%06X` nel topic `tasmota_%06X` configurato sulla web app di Tasmota).
+
+    ![Tasmota MQTT topic](./documentation/tasmotaTopic.png "Tasmota MQTT topic")
+
+    In questo esempio, un `Topic` funzionante nella logica dell'app (HTTP + MongoDB) è costituito dalla sola parte finale, `2C3C74`. Sarà compito del backend includere questo topic app-side negli effettivi topic MQTT-side usati per la comunicazione.
+
+    Ad esempio, `stat/tasmota_2C3C74/POWER` è il topic cui bisogna effettuare la subscribe per essere notificati di tutte le modifiche di stato del device, mentre `cmnd/tasmota_2C3C74/Power` è il topic cui bisogna effettuare la publish per triggerare un TOGGLE hardware dello stato del dispositivo.
+
+    Data una tab cliccata ed attiva, gli altri elementi della GUI saranno mappati e sincronizzati in accordo con le Observation registrate per quel dato Sonoff nel database, ad esempio il consumo energetico e il tempo trascorso acceso, lo stato di ON o OFF e il grafico degli eventi.
+
+2. ### Aggiungere un nuovo Sonoff alla collezione
+
+    Cliccando su questa tab si mostra invece un form dal quale è possibile aggiungere un nuovo Sonoff, dati il suo topic Tasmota e un nome custom dato dall'utente.
+
+    ![Aggiungi nuovo Sonoff](./documentation/addSonoff.png "Aggiungi nuovo Sonoff")
+
+    Se nessun Sonoff esiste con quel topic, il database ne crea uno; altrimenti, l'utente autenticato viene aggiunto alla lista di owners del device, insieme al nome dato.
+
+    Il Sonoff viene quindi aggiunto in una nuova tab. Non è implementato nessun controllo sulla reale esistenza del device: così facendo, si mantiene lo stato dei Sonoff anche quando sono scollegati, o se si connettono via MQTT in un secondo momento, anche mentre l'app è già in esecuzione.
+
+3. ### Scegliere un intervallo temporale
+
+    Sono stati implementati tre intervalli: ultima ora, ultime 24 ore, e ultimi 7 giorni.
+    Scegliere un nuovo intervallo aggiorna lo stato dei punti 4, 5 e 6 di conseguenza.
+
+4. ### Il grafico degli eventi
+
+    `Chart.js` è stato utilizzaot per renderizzare un grafico degli eventi di ogni ON e OFF registrato per il Sonoff attivo.
+
+    La logica di backend è quella di registrare come Observation ogni evento legato ad un messaggio MQTT che modifichi l'ultimo stato registrato per il Sonoff, e di cancellare Observations più vecchie di 7 giorni.
+
+    Questo approccio rappresenta un miglioramento rispetto a quelli naive, come ad esempio registrare Observations sulla base di un timer salvando un nuovo oggetto ogni X secondi, poiché non satura il database ed evita di registrare dati inutili che andrebbero comunque eliminati in fase di calcolo dei punti da plottare sul grafico.
+
+    Passare il mouse sopra il grafico ne espone i singoli punti, sui quali un popup mostra l'effettivo stato di ON o OFF registrato, insieme a data ed ora in cui è stata prodotta l'Observation.
+
+5. ### Il tempo trascorso acceso
+
+    L'etichetta del grafico rappresenta il tempo che il device ha trascorso acceso, all'interno dell'intervallo temporale scelto.
+
+6. ### Calcolo del consumo energetico
+
+    Questa semplice calcolatrice richiede all'utente di immettere a sinistra la potenza media del dispositivo, in `kW`, e la moltiplica per il `tempo trascorso acceso` dando in output il consumo energetico medio in `kWh` sulla destra, sempre nell'intervallo di tempo scelto.
+    
+    Con un semplice update è possibile integrare la potenza del device come campo nel database, tuttavia è sempre meglio lasciare all'utente la possibilità di immettere al volo un valore custom, poiché dispositivi diversi supportano diverse modalità operative, le quali a loro volta corrispondono a diverse quantità di potenza consumata.
+
+7. ### Il Power button ON/OFF
+
+    Questo bottone indica lo stato attuale del device, con una leggera tinta blu in caso di ON, e nessuna tinta attorno ad un bottone grigio in caso di OFF.
+
+    Cliccando il bottone si invia un comando di TOGGLE alla backend API, la quale a sua volta pubblica un comando di TOGGLE su MQTT.
+
+    Lo stato del bottone è sincronizzato grazie ad un meccanismo di subscribe sul topic MQTT del device, e quindi si aggiorna coerentemente ogni volta che lo stato viene modificato per altri mezzi (bottone fisico, publish manuale sul topic, click da web app Tasmota, ...).
+
+8. ### Cancellare il Sonoff
+
+    Questo bottone cancella il Sonoff dalla collezione dell'utente. Sarà effettivamente cancellato dal database se non è rimasto nessun utente che lo possiede, e altrimenti solo l'utente autenticato verrà rimosso dalla lista dei suoi owners.
+
+    le Observations non vengono mai rimosse (eccetto quelle più vecchie di 7 giorni), quindi in caso di cancellazione accidentale lo stato del Sonoff è ripristinato correttamente alla prossima aggiunta, basandosi sulle Observations rimaste.
+
+9. ### Utente corrente e Logout
+
+    Dove prima si trovavano i link di `Login` e `Register`, è ora elencato il nickname dell'utente loggato, insieme ad un link per il `Logout`. Le pagine di Login e Register non sono disponibili finché non avviene il logout, ed in tal caso si svuota anche il Local Storage.
+
+    Un logout automatico è triggerato non appena scade il JWT (di default: in un'ora).

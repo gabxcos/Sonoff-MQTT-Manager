@@ -53,7 +53,7 @@
 </script>
 
 <form class="form-signin" on:submit|preventDefault={submit}>
-    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+    <h1 class="h3 mb-3 font-weight-normal">Sign in</h1>
     <label for="inputUsername" class="sr-only">Username</label>
     <input type="text" id="inputUsername" class="form-control" bind:value={username} placeholder="Username" required="true">
     <label for="inputPassword" class="sr-only">Password</label>
