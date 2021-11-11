@@ -94,7 +94,7 @@
 
 				if(newSonoffs.length == sonoffs.length){
 					for (var i = 0; i < newSonoffs.length; i++) {
-						if(newSonoffs[i].topic!==sonoffs[i].topic && newSonoffs[i].name !== newSonoffs[i].name){
+						if(newSonoffs[i].topic!==sonoffs[i].topic || newSonoffs[i].name !== newSonoffs[i].name){
 							sonoffs = newSonoffs;
 							currTopic = newSonoffs.length>0 ? newSonoffs[0].topic : null;
 							break;
