@@ -197,8 +197,8 @@
 		if(pointData.length<1) return 0;
 		let tmpTime = 0;
 		for(var i = 0; i < (pointData.length - 1); i+=2){
-			if(pointData[i].y == 'ON' && pointData[i].x >= Date.now() - timeSpan) tmpTime += (pointData[i+1].x - pointData[i].x);
-			else i++;
+			if(pointData[i].y == 'ON' && pointData[i].x >= (Date.now() - timeSpan)) tmpTime += (pointData[i+1].x - pointData[i].x);
+			else i--;
 		}
 		return tmpTime;
 	}
